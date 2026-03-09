@@ -24,7 +24,7 @@
 
 ### 3) 首次使用必做
 
-![VoiceTyper Preview](assets\images\ui.png)
+![VoiceTyper Preview](assets/images/ui.png)
 
 - 安装 Python 3.10+ 并加入 PATH
 - 安装依赖（一次）：
