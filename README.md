@@ -21,10 +21,11 @@
 
 - 双击安装包完成安装
 - 启动 `VoiceTyper`
+- 
+##  界面展示
+![VoiceTyper Preview](assets/images/ui.png)
 
 ### 3) 首次使用必做
-
-![VoiceTyper Preview](assets/images/ui.png)
 
 - 安装 Python 3.10+ 并加入 PATH
 - 安装依赖（一次）：
@@ -149,18 +150,10 @@ python -c "import whisper; whisper.load_model('small')"
 
 - `本地`：通过 Ollama 调用本地模型
 - `API`：填写以下 3 项
-  - API 地址（OpenAI 兼容接口）
-  - API Key
+  - API 地址（OpenAI 兼容接口，推荐deepseek，毕竟便宜）
+  - API Key 
   - 模型名（如 `deepseek-chat`、`qwen-plus`、`glm-4-flash`、`gpt-4o-mini`）
 
-### 🔐 关于 API Key 是否会跟随安装包
-
-不会默认跟随你的 Key。每个用户在自己机器上独立配置。
-
-仍然建议：
-- 不要把任何真实 key 写进源码
-- 不要上传本机 `%LOCALAPPDATA%\VoiceTyper\engine_config.json`
-- 如果 key 曾暴露，立即去服务商后台轮换
 
 ## 📦 打包 EXE
 
