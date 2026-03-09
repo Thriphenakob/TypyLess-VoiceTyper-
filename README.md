@@ -1,6 +1,5 @@
 # VoiceTyper 🎙️
-
-桌面端语音输入助手（Electron + React + Python）。
+桌面端语音输入助手（Electron + React + Python），最开始用typeless发现要米，穷大学生付不起，练练手搞一个得了🐖🐖
 
 ## 🖼️ 语音转文字
 
@@ -32,7 +31,8 @@
 python -m pip install openai-whisper torch sounddevice numpy scipy ollama pyautogui pyperclip
 ```
 
-- 可选：提前下载本地 ASR 默认模型（whisper-base）：
+- 可选：提前下载本地 ASR 默认模型（whisper-base/实测small效果最好，但是更大一些）：
+( tiny / base / small 下载后大致分别是 75 MB、142 MB、466 MB , 按需下载就好)
 
 ```powershell
 python -c "import whisper; whisper.load_model('base')"
