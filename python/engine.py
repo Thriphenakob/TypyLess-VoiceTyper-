@@ -15,6 +15,7 @@ Config Example (set via set_config command):
   {
     "asr_backend": "local",        # "local" | "api"
     "asr_local_model": "whisper-base",  # whisper-tiny | whisper-base | whisper-small
+    "asr_local_model_path": "",    # optional local .pt file or cache directory
     "asr_api_url": "",             # e.g. "https://api.openai.com/v1/audio/transcriptions"
     "asr_api_key": "",
     "asr_api_model": "whisper-1",
@@ -122,7 +123,26 @@ class VoiceEngine:
         try:
             whisper_size = self._resolve_whisper_size(self.config.get("asr_local_model"))
             self.config["asr_local_model"] = f"whisper-{whisper_size}"
-            self._load_whisper(whisper_size)
+            local_file, download_root = self._resolve_whisper_local_path(whisper_size)
+
+            if local_file and os.path.isfile(local_file):
+                self._load_whisper(whisper_size)
+                return
+
+            cache_root = download_root or self._default_whisper_cache_dir()
+            cache_path = os.path.join(cache_root, f"{whisper_size}.pt")
+            if os.path.isfile(cache_path):
+                self._load_whisper(whisper_size)
+                return
+
+            self._whisper = None
+            self.send(
+                "asr_install_required",
+                options=["whisper-tiny", "whisper-base", "whisper-small"],
+                selected=f"whisper-{whisper_size}",
+                message="未检测到本地 ASR 模型，请先安装（tiny/base/small）",
+            )
+            self.send("status", message="未检测到本地 ASR 模型，请在设置中选择并点击安装")
         except Exception as e:
             self.send("error", message=f"ASR 加载失败: {e}，尝试 Whisper 回退...")
             self._load_whisper_fallback()
@@ -281,6 +301,36 @@ class VoiceEngine:
             self._whisper = None
             self.send("error", message=f"无可用 ASR 模型: {e}")
 
+    def prepare_asr_model(self, model_name: str = ""):
+        try:
+            import whisper
+
+            size = self._resolve_whisper_size(model_name or self.config.get("asr_local_model"))
+            self.config["asr_local_model"] = f"whisper-{size}"
+            local_file, download_root = self._resolve_whisper_local_path(size)
+
+            if local_file and os.path.isfile(local_file):
+                checkpoint = local_file
+                self.send(
+                    "download_progress",
+                    target="asr",
+                    model=f"whisper-{size}",
+                    stage="completed",
+                    percent=100,
+                )
+            else:
+                cache_root = download_root or self._default_whisper_cache_dir()
+                checkpoint = self._ensure_whisper_checkpoint(whisper, size, cache_root)
+
+            if self.config.get("asr_backend") == "local":
+                self.send("status", message=f"正在加载 Whisper {size} 模型...")
+                self._whisper = whisper.load_model(checkpoint)
+                self.send("status", message=f"Whisper {size} 就绪")
+
+            self.send("asr_model_prepared", model=f"whisper-{size}", path=checkpoint)
+        except Exception as e:
+            self.send("error", message=f"ASR 模型安装失败: {e}")
+
     def check_llm(self):
         if self.config["llm_backend"] == "api":
             if self.config["llm_api_url"] and self.config["llm_api_key"]:
@@ -417,6 +467,7 @@ class VoiceEngine:
         else:
             if self._whisper:
                 return self._asr_whisper(audio_np)
+            self.send("error", message="本地 ASR 模型未安装，请先在设置中点击安装模型")
             return ""
 
     def _asr_whisper(self, audio_np: np.ndarray) -> str:
@@ -596,6 +647,9 @@ class VoiceEngine:
                         pass
                 self._pending_audio = audio_data
                 self.send("recording_stopped")
+        elif cmd == "prepare_asr_model":
+            model_name = data.get("model", "")
+            threading.Thread(target=self.prepare_asr_model, args=(model_name,), daemon=True).start()
         elif cmd == "set_config":
             old_asr = self.config["asr_backend"]
             old_llm = self.config["llm_backend"]

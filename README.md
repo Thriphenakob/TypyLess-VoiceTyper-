@@ -31,8 +31,8 @@
 python -m pip install openai-whisper torch sounddevice numpy scipy ollama pyautogui pyperclip
 ```
 
-- 可选：提前下载本地 ASR 默认模型（whisper-base/实测small效果最好，但是更大一些）：
-( tiny / base / small 下载后大致分别是 75 MB、142 MB、466 MB , 按需下载就好)
+- 可选：提前下载本地 ASR 模型（tiny/base/small 可选）：
+( tiny / base / small 下载后大致分别是 75 MB、142 MB、466 MB，按需下载 )
 
 ```powershell
 python -c "import whisper; whisper.load_model('base')"
@@ -123,13 +123,25 @@ npm run electron:start
 - `whisper-base`：速度与准确率平衡，默认推荐
 - `whisper-small`：准确率更高，但更慢、更占资源
 
-首次使用某个模型会自动下载；也可提前手动下载：
+首次安装改为手动触发：
+
+- 打开 `设置 -> AI 引擎 -> 语音识别(ASR)`
+- 选择 `tiny/base/small`
+- 点击“安装 TINY/BASE/SMALL”
+- 下载过程中会显示实时进度条（百分比、大小、速度）
+
+你也可以提前手动下载：
 
 ```powershell
 python -c "import whisper; whisper.load_model('tiny')"
 python -c "import whisper; whisper.load_model('base')"
 python -c "import whisper; whisper.load_model('small')"
 ```
+
+可选：在设置页填写“本地模型路径”：
+
+- 填 `.pt` 文件路径：直接加载该模型文件
+- 填目录路径：优先读取该目录中的模型；不存在时下载到该目录
 
 ### LLM（文本润色/翻译）
 

@@ -21,6 +21,10 @@ export default function Home({
   asrDownloadDownloadedMB = 0,
   asrDownloadTotalMB = 0,
   asrDownloadSpeedMBps = 0,
+  asrInstallRequired = false,
+  asrInstallOptions = ['whisper-tiny', 'whisper-base', 'whisper-small'],
+  asrPreparingModel = '',
+  onInstallAsrModel,
 }: {
   onNavigate?: (tab: string) => void;
   onToggleRecording?: () => void;
@@ -34,6 +38,10 @@ export default function Home({
   asrDownloadDownloadedMB?: number;
   asrDownloadTotalMB?: number;
   asrDownloadSpeedMBps?: number;
+  asrInstallRequired?: boolean;
+  asrInstallOptions?: string[];
+  asrPreparingModel?: string;
+  onInstallAsrModel?: (model: string) => void;
 }) {
   const [recentItems, setRecentItems] = useState<HistoryItem[]>([]);
   const [stats, setStats] = useState({ todayMinutes: 0, todayWords: 0 });
@@ -60,7 +68,7 @@ export default function Home({
               </p>
               <button
                 onClick={onToggleRecording}
-                disabled={isProcessing || !engineRunning}
+                disabled={isProcessing || !engineRunning || asrInstallRequired}
                 className="bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Mic size={20} />
@@ -69,6 +77,25 @@ export default function Home({
               <p className="text-sm text-blue-50/90 mt-3">
                 {statusMessage || (engineRunning ? '引擎就绪，可开始录音。' : '正在初始化引擎，请稍候。')}
               </p>
+              {asrInstallRequired && !asrDownloadActive && (
+                <div className="mt-3 max-w-md bg-white/15 border border-white/25 rounded-lg p-3">
+                  <p className="text-xs text-white/95 mb-2">首次使用请先安装 ASR 模型：</p>
+                  <div className="flex flex-wrap gap-2">
+                    {asrInstallOptions.map((model) => (
+                      <button
+                        key={model}
+                        onClick={() => onInstallAsrModel?.(model)}
+                        className="px-2.5 py-1.5 rounded-md text-xs bg-white text-blue-700 hover:bg-blue-50 transition-colors"
+                      >
+                        安装 {model.replace('whisper-', '').toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  {asrPreparingModel && (
+                    <p className="text-[11px] text-blue-50/95 mt-2">正在安装：{asrPreparingModel}</p>
+                  )}
+                </div>
+              )}
               {asrDownloadActive && (
                 <div className="mt-3 max-w-md bg-white/15 border border-white/25 rounded-lg p-3">
                   <div className="flex items-center justify-between text-xs text-white/90 mb-1.5">

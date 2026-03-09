@@ -69,6 +69,10 @@ export default function App() {
             asrDownloadDownloadedMB={engine.asrDownloadDownloadedMB}
             asrDownloadTotalMB={engine.asrDownloadTotalMB}
             asrDownloadSpeedMBps={engine.asrDownloadSpeedMBps}
+            asrInstallRequired={engine.asrInstallRequired}
+            asrInstallOptions={engine.asrInstallOptions}
+            asrPreparingModel={engine.asrPreparingModel}
+            onInstallAsrModel={engine.installAsrModel}
           />
         )}
         {activeTab === 'stats' && <Stats />}
@@ -83,6 +87,10 @@ export default function App() {
             asrDownloadDownloadedMB={engine.asrDownloadDownloadedMB}
             asrDownloadTotalMB={engine.asrDownloadTotalMB}
             asrDownloadSpeedMBps={engine.asrDownloadSpeedMBps}
+            asrInstallRequired={engine.asrInstallRequired}
+            asrInstallOptions={engine.asrInstallOptions}
+            asrPreparingModel={engine.asrPreparingModel}
+            onInstallAsrModel={engine.installAsrModel}
           />
         )}
       </main>

@@ -17,6 +17,9 @@ interface EngineEvent {
     speed_mbps?: number;
     llm_available?: boolean;
     level?: number;
+    model?: string;
+    path?: string;
+    options?: string[];
 }
 
 interface HotkeyEvent {

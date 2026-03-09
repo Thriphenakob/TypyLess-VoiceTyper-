@@ -24,6 +24,9 @@ export interface EngineState {
     asrDownloadDownloadedMB: number;
     asrDownloadTotalMB: number;
     asrDownloadSpeedMBps: number;
+    asrInstallRequired: boolean;
+    asrInstallOptions: string[];
+    asrPreparingModel: string;
 }
 
 function inferLlmAvailableFromConfig(engineCfg: Record<string, unknown>): boolean {
@@ -60,6 +63,9 @@ export function useVoiceEngine() {
         asrDownloadDownloadedMB: 0,
         asrDownloadTotalMB: 0,
         asrDownloadSpeedMBps: 0,
+        asrInstallRequired: false,
+        asrInstallOptions: ['whisper-tiny', 'whisper-base', 'whisper-small'],
+        asrPreparingModel: '',
     });
 
     const recordingStartTime = useRef<number>(0);
@@ -148,6 +154,7 @@ export function useVoiceEngine() {
                             ...prev,
                             llmAvailable: inferLlmAvailableFromConfig(engineCfg),
                             llmAvailabilityKnown: true,
+                            asrInstallRequired: String(engineCfg.asr_backend || '').toLowerCase() === 'api' ? false : prev.asrInstallRequired,
                         }));
                     }
                     break;
@@ -164,6 +171,7 @@ export function useVoiceEngine() {
                             ...prev,
                             llmAvailable: inferLlmAvailableFromConfig(engineCfg),
                             llmAvailabilityKnown: true,
+                            asrInstallRequired: String(engineCfg.asr_backend || '').toLowerCase() === 'api' ? false : prev.asrInstallRequired,
                         }));
                     }
                     break;
@@ -186,9 +194,40 @@ export function useVoiceEngine() {
                         asrDownloadDownloadedMB: downloadedMB,
                         asrDownloadTotalMB: totalMB,
                         asrDownloadSpeedMBps: speedMBps,
+                        asrPreparingModel: active ? model : (stage === 'completed' ? '' : prev.asrPreparingModel),
                         statusMessage: active
                             ? `正在下载 ${model} 模型... ${percent}%`
                             : prev.statusMessage,
+                    }));
+                    break;
+                }
+
+                case 'asr_install_required': {
+                    const options = Array.isArray(data.options)
+                        ? data.options.map(v => String(v)).filter(Boolean)
+                        : ['whisper-tiny', 'whisper-base', 'whisper-small'];
+                    setState(prev => ({
+                        ...prev,
+                        asrInstallRequired: true,
+                        asrInstallOptions: options,
+                        asrPreparingModel: '',
+                        asrDownloadActive: false,
+                        asrDownloadPercent: 0,
+                        statusMessage: data.message || '未检测到本地 ASR 模型，请先安装',
+                    }));
+                    break;
+                }
+
+                case 'asr_model_prepared': {
+                    const model = String(data.model || '');
+                    setState(prev => ({
+                        ...prev,
+                        asrInstallRequired: false,
+                        asrPreparingModel: '',
+                        asrDownloadActive: false,
+                        asrDownloadPercent: 100,
+                        asrDownloadModel: model || prev.asrDownloadModel,
+                        statusMessage: model ? `${model} 安装完成，可开始录音` : 'ASR 模型安装完成，可开始录音',
                     }));
                     break;
                 }
@@ -292,6 +331,8 @@ export function useVoiceEngine() {
                         ...prev,
                         isRecording: false,
                         isProcessing: false,
+                        asrDownloadActive: false,
+                        asrPreparingModel: '',
                         error: data.message || '未知错误',
                         statusMessage: ''
                     }));
@@ -421,6 +462,15 @@ export function useVoiceEngine() {
         if (isTogglingRef.current) return;
         const cur = stateRef.current;
         if (cur.isProcessing || (isElectron && !cur.engineRunning)) return;
+        if (cur.asrInstallRequired) {
+            setState(prev => ({
+                ...prev,
+                error: '本地 ASR 模型尚未安装，请先在设置中安装 tiny/base/small 模型',
+                statusMessage: '请先安装本地 ASR 模型',
+            }));
+            setTimeout(() => setState(prev => ({ ...prev, error: '' })), 4500);
+            return;
+        }
         if (mode === 'translate' && cur.llmAvailabilityKnown && !cur.llmAvailable) {
             setState(prev => ({
                 ...prev,
@@ -455,6 +505,7 @@ export function useVoiceEngine() {
 
     const startRecording = useCallback((mode = 'normal') => {
         if (stateRef.current.isRecording || pendingStartRef.current || stateRef.current.isProcessing || (isElectron && !stateRef.current.engineRunning)) return;
+        if (stateRef.current.asrInstallRequired) return;
         if (mode === 'translate' && stateRef.current.llmAvailabilityKnown && !stateRef.current.llmAvailable) return;
         if (isElectron) {
             pendingStartRef.current = true;
@@ -471,6 +522,29 @@ export function useVoiceEngine() {
         }
     }, [isElectron]);
 
+    const installAsrModel = useCallback((model: string) => {
+        if (!isElectron || !window.electronAPI?.sendCommand) return;
+        const normalized = String(model || '').trim() || 'whisper-base';
+        updateConfig({ asrLocalModel: normalized });
+        setState(prev => ({
+            ...prev,
+            asrPreparingModel: normalized,
+            asrDownloadActive: true,
+            asrDownloadPercent: 0,
+            asrDownloadModel: normalized,
+            statusMessage: `开始安装 ${normalized}...`,
+            error: '',
+        }));
+        window.electronAPI.sendCommand({
+            cmd: 'set_config',
+            config: {
+                asr_backend: 'local',
+                asr_local_model: normalized,
+            },
+        });
+        window.electronAPI.sendCommand({ cmd: 'prepare_asr_model', model: normalized });
+    }, [isElectron]);
+
     // Called from SettingsPage when user changes hotkeys
     const updateHotkeys = useCallback((keys: Record<string, string | boolean>) => {
         if (isElectron && window.electronAPI!.updateHotkeys) {
@@ -483,6 +557,7 @@ export function useVoiceEngine() {
         toggleRecording,
         startRecording,
         stopRecording,
+        installAsrModel,
         updateHotkeys,
     };
 }

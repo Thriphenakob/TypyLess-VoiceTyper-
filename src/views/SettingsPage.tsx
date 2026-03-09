@@ -21,6 +21,10 @@ interface SettingsPageProps {
     asrDownloadDownloadedMB?: number;
     asrDownloadTotalMB?: number;
     asrDownloadSpeedMBps?: number;
+    asrInstallRequired?: boolean;
+    asrInstallOptions?: string[];
+    asrPreparingModel?: string;
+    onInstallAsrModel?: (model: string) => void;
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
@@ -50,6 +54,10 @@ export default function SettingsPage({
     asrDownloadDownloadedMB = 0,
     asrDownloadTotalMB = 0,
     asrDownloadSpeedMBps = 0,
+    asrInstallRequired = false,
+    asrInstallOptions = ['whisper-tiny', 'whisper-base', 'whisper-small'],
+    asrPreparingModel = '',
+    onInstallAsrModel,
 }: SettingsPageProps) {
     const [config, setConfig] = useState<AppConfig>(getConfig());
     const [stats, setStats] = useState<ReturnType<typeof getTotalStats> | null>(null);
@@ -282,7 +290,7 @@ export default function SettingsPage({
                                 </div>
                                 {config.asrBackend === 'local' ? (
                                     <div className="space-y-3">
-                                        <p className="text-xs text-gray-500">本地模型离线识别。首次使用对应模型时会自动下载。</p>
+                                        <p className="text-xs text-gray-500">本地模型离线识别。首次使用请先选择 tiny/base/small 并点击安装。</p>
                                         <SelectField
                                             label="本地模型"
                                             value={config.asrLocalModel}
@@ -305,6 +313,41 @@ export default function SettingsPage({
                                             <p className="text-[11px] text-gray-500 mt-1">
                                                 留空使用系统默认缓存目录。可填已有模型文件（.pt）或模型目录。
                                             </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs text-gray-500">模型安装</span>
+                                                {asrInstallRequired && (
+                                                    <span className="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                                        需要先安装
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {asrInstallOptions.map((model) => (
+                                                    <button
+                                                        key={model}
+                                                        type="button"
+                                                        disabled={asrDownloadActive}
+                                                        onClick={() => {
+                                                            update({ asrLocalModel: model });
+                                                            onInstallAsrModel?.(model);
+                                                        }}
+                                                        className={`text-xs px-3 py-1.5 rounded-md border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                                                            config.asrLocalModel === model
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                                                        }`}
+                                                    >
+                                                        安装 {model.replace('whisper-', '').toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {asrPreparingModel && (
+                                                <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-2">
+                                                    正在安装：{asrPreparingModel}
+                                                </p>
+                                            )}
                                         </div>
                                         {asrDownloadActive && (
                                             <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-900/10 p-3">
