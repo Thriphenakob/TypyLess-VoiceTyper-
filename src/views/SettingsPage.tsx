@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
-import { Keyboard, Mic, Headphones, Languages, Globe, MicIcon, Volume2, VolumeX, Power, BarChart2, RotateCcw, Info, ChevronDown, Cpu, Cloud } from 'lucide-react';
+import { Keyboard, Mic, Headphones, Languages, Globe, MicIcon, Volume2, VolumeX, Power, BarChart2, RotateCcw, Info, ChevronDown, Cpu, Cloud, FolderOpen } from 'lucide-react';
 import { getConfig, updateConfig, getTotalStats, type AppConfig } from '../lib/storage';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -120,6 +120,14 @@ export default function SettingsPage({
         if (window.confirm('确定要重置所有统计数据吗？此操作无法撤销。')) {
             localStorage.removeItem('voicetyper_daily_stats');
             setStats(getTotalStats());
+        }
+    };
+
+    const handlePickAsrFolder = async () => {
+        if (!window.electronAPI?.pickDirectory) return;
+        const picked = await window.electronAPI.pickDirectory(config.asrLocalModelPath || undefined);
+        if (picked) {
+            update({ asrLocalModelPath: picked });
         }
     };
 
@@ -303,15 +311,26 @@ export default function SettingsPage({
                                         />
                                         <div>
                                             <label className="text-xs text-gray-500 mb-1 block">本地模型路径（可选）</label>
-                                            <input
-                                                type="text"
-                                                value={config.asrLocalModelPath}
-                                                onChange={(e) => update({ asrLocalModelPath: e.target.value })}
-                                                placeholder="例如：D:\\AI\\whisper 或 D:\\AI\\whisper\\base.pt"
-                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
-                                            />
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={config.asrLocalModelPath}
+                                                    onChange={(e) => update({ asrLocalModelPath: e.target.value })}
+                                                    placeholder="例如：D:\\AI\\whisper 或 D:\\AI\\whisper\\base.pt"
+                                                    className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handlePickAsrFolder}
+                                                    disabled={!window.electronAPI?.pickDirectory}
+                                                    className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 hover:border-blue-400 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <FolderOpen size={14} />
+                                                    选择文件夹
+                                                </button>
+                                            </div>
                                             <p className="text-[11px] text-gray-500 mt-1">
-                                                留空使用系统默认缓存目录。可填已有模型文件（.pt）或模型目录。
+                                                留空使用系统默认缓存目录。可填已有模型文件（.pt）或模型目录，也可点击按钮选择本地目录。
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
@@ -503,7 +522,7 @@ export default function SettingsPage({
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">关于</h2>
                         </div>
                         <div className="space-y-2 text-sm text-gray-500">
-                            <p>VoiceTyper v0.1.0</p>
+                            <p>VoiceTyper v0.1.2</p>
                             <p>由 Thriphen 开发</p>
                             <p>基于 Whisper + Qwen 构建</p>
                         </div>

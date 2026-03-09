@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Update hotkeys from Settings page
     updateHotkeys: (keysObj) => ipcRenderer.invoke('update-hotkey', keysObj),
+    pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', { defaultPath }),
 
     // Overlay controls
     showOverlay: () => ipcRenderer.invoke('show-overlay'),

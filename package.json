@@ -1,7 +1,7 @@
 {
   "name": "voicetyper",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "VoiceTyper - 智能语音输入助手",
   "author": "Thriphen",
   "type": "module",

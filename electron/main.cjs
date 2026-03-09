@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, ipcMain } = require('electron');
+const { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -337,6 +337,25 @@ ipcMain.handle('update-hotkey', (_event, newKey) => {
     log('INFO', 'IPC update-hotkey', newKey);
     registerHotkeys(newKey);
     return true;
+});
+
+ipcMain.handle('pick-directory', async (_event, options) => {
+    try {
+        const focusedWindow = BrowserWindow.getFocusedWindow() || mainWindow || undefined;
+        const defaultPath = options && typeof options.defaultPath === 'string' ? options.defaultPath : undefined;
+        const result = await dialog.showOpenDialog(focusedWindow, {
+            title: '选择 ASR 模型目录',
+            properties: ['openDirectory', 'createDirectory'],
+            defaultPath,
+        });
+        if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+            return null;
+        }
+        return result.filePaths[0];
+    } catch (err) {
+        log('ERROR', 'pick-directory failed', { message: err?.message, stack: err?.stack });
+        return null;
+    }
 });
 
 // Overlay IPC

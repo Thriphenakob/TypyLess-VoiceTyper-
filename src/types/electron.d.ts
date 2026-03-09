@@ -31,6 +31,7 @@ interface ElectronAPI {
     sendCommand: (cmd: { cmd: string;[key: string]: unknown }) => Promise<boolean>;
     getEngineStatus: () => Promise<{ running: boolean }>;
     updateHotkeys: (keys: Record<string, string | boolean>) => Promise<boolean>;
+    pickDirectory?: (defaultPath?: string) => Promise<string | null>;
     showOverlay: () => Promise<void>;
     hideOverlay: () => Promise<void>;
     updateOverlay?: (state: { visible: boolean; status: string; text?: string }) => Promise<void>;
