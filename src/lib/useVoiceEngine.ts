@@ -18,6 +18,12 @@ export interface EngineState {
     lastWordCount: number;
     statusMessage: string;
     error: string;
+    asrDownloadActive: boolean;
+    asrDownloadPercent: number;
+    asrDownloadModel: string;
+    asrDownloadDownloadedMB: number;
+    asrDownloadTotalMB: number;
+    asrDownloadSpeedMBps: number;
 }
 
 function inferLlmAvailableFromConfig(engineCfg: Record<string, unknown>): boolean {
@@ -48,6 +54,12 @@ export function useVoiceEngine() {
         lastWordCount: 0,
         statusMessage: '正在初始化引擎...',
         error: '',
+        asrDownloadActive: false,
+        asrDownloadPercent: 0,
+        asrDownloadModel: '',
+        asrDownloadDownloadedMB: 0,
+        asrDownloadTotalMB: 0,
+        asrDownloadSpeedMBps: 0,
     });
 
     const recordingStartTime = useRef<number>(0);
@@ -127,6 +139,7 @@ export function useVoiceEngine() {
                         if (engineCfg.llm_local_model) patch.llmLocalModel = engineCfg.llm_local_model;
                         if (engineCfg.asr_backend) patch.asrBackend = engineCfg.asr_backend;
                         if (engineCfg.asr_local_model) patch.asrLocalModel = engineCfg.asr_local_model;
+                        if ('asr_local_model_path' in engineCfg) patch.asrLocalModelPath = String(engineCfg.asr_local_model_path || '');
                         if (engineCfg.asr_api_url) patch.asrApiUrl = engineCfg.asr_api_url;
                         if (engineCfg.asr_api_key) patch.asrApiKey = engineCfg.asr_api_key;
                         if (engineCfg.asr_api_model) patch.asrApiModel = engineCfg.asr_api_model;
@@ -144,6 +157,9 @@ export function useVoiceEngine() {
                 case 'config_updated':
                     if (data.config) {
                         const engineCfg = data.config as Record<string, unknown>;
+                        if ('asr_local_model_path' in engineCfg) {
+                            updateConfig({ asrLocalModelPath: String(engineCfg.asr_local_model_path || '') });
+                        }
                         setState(prev => ({
                             ...prev,
                             llmAvailable: inferLlmAvailableFromConfig(engineCfg),
@@ -151,6 +167,31 @@ export function useVoiceEngine() {
                         }));
                     }
                     break;
+
+                case 'download_progress': {
+                    if (data.target !== 'asr') break;
+                    const stage = String(data.stage || '');
+                    const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
+                    const active = stage === 'started' || stage === 'downloading';
+                    const model = String(data.model || 'whisper');
+                    const downloadedMB = Number(data.downloaded_mb || 0);
+                    const totalMB = Number(data.total_mb || 0);
+                    const speedMBps = Number(data.speed_mbps || 0);
+
+                    setState(prev => ({
+                        ...prev,
+                        asrDownloadActive: active,
+                        asrDownloadPercent: percent,
+                        asrDownloadModel: model,
+                        asrDownloadDownloadedMB: downloadedMB,
+                        asrDownloadTotalMB: totalMB,
+                        asrDownloadSpeedMBps: speedMBps,
+                        statusMessage: active
+                            ? `正在下载 ${model} 模型... ${percent}%`
+                            : prev.statusMessage,
+                    }));
+                    break;
+                }
 
                 case 'recording_started':
                     recordingStartTime.current = Date.now();

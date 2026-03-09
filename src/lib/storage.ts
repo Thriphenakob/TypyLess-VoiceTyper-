@@ -31,6 +31,7 @@ export interface AppConfig {
     // AI Engine
     asrBackend: 'local' | 'api';
     asrLocalModel: string;
+    asrLocalModelPath: string;
     asrApiUrl: string;
     asrApiKey: string;
     asrApiModel: string;
@@ -82,6 +83,7 @@ const DEFAULT_CONFIG: AppConfig = {
     // AI Engine defaults
     asrBackend: 'local',
     asrLocalModel: 'whisper-base',
+    asrLocalModelPath: '',
     asrApiUrl: '',
     asrApiKey: '',
     asrApiModel: 'whisper-1',

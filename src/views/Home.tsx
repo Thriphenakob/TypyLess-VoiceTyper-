@@ -15,6 +15,12 @@ export default function Home({
   isProcessing = false,
   engineRunning = false,
   statusMessage = '',
+  asrDownloadActive = false,
+  asrDownloadPercent = 0,
+  asrDownloadModel = '',
+  asrDownloadDownloadedMB = 0,
+  asrDownloadTotalMB = 0,
+  asrDownloadSpeedMBps = 0,
 }: {
   onNavigate?: (tab: string) => void;
   onToggleRecording?: () => void;
@@ -22,6 +28,12 @@ export default function Home({
   isProcessing?: boolean;
   engineRunning?: boolean;
   statusMessage?: string;
+  asrDownloadActive?: boolean;
+  asrDownloadPercent?: number;
+  asrDownloadModel?: string;
+  asrDownloadDownloadedMB?: number;
+  asrDownloadTotalMB?: number;
+  asrDownloadSpeedMBps?: number;
 }) {
   const [recentItems, setRecentItems] = useState<HistoryItem[]>([]);
   const [stats, setStats] = useState({ todayMinutes: 0, todayWords: 0 });
@@ -57,6 +69,23 @@ export default function Home({
               <p className="text-sm text-blue-50/90 mt-3">
                 {statusMessage || (engineRunning ? '引擎就绪，可开始录音。' : '正在初始化引擎，请稍候。')}
               </p>
+              {asrDownloadActive && (
+                <div className="mt-3 max-w-md bg-white/15 border border-white/25 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs text-white/90 mb-1.5">
+                    <span>下载 {asrDownloadModel || 'ASR 模型'}</span>
+                    <span>{Math.round(asrDownloadPercent)}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-white/25 overflow-hidden">
+                    <div
+                      className="h-full bg-white transition-all duration-150"
+                      style={{ width: `${Math.max(2, Math.min(100, asrDownloadPercent))}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-blue-50/95 mt-1.5">
+                    {asrDownloadDownloadedMB.toFixed(1)}MB / {asrDownloadTotalMB > 0 ? `${asrDownloadTotalMB.toFixed(1)}MB` : '未知'} · {asrDownloadSpeedMBps.toFixed(2)} MB/s
+                  </p>
+                </div>
+              )}
             </div>
             <Mic size={160} className="absolute -right-10 -bottom-10 text-white/10 rotate-12" />
           </div>

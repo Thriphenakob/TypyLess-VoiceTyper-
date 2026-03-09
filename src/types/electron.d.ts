@@ -9,6 +9,14 @@ interface EngineEvent {
     is_silent?: boolean;
     config?: Record<string, unknown>;
     mode?: string;
+    target?: string;
+    stage?: string;
+    percent?: number;
+    downloaded_mb?: number;
+    total_mb?: number;
+    speed_mbps?: number;
+    llm_available?: boolean;
+    level?: number;
 }
 
 interface HotkeyEvent {

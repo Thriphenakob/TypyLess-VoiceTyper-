@@ -34,6 +34,8 @@ import threading
 import tempfile
 import urllib.request
 import re
+import time
+import hashlib
 
 import numpy as np
 from scipy.io import wavfile
@@ -78,6 +80,7 @@ class VoiceEngine:
             # ASR settings
             "asr_backend": "local",          # "local" | "api"
             "asr_local_model": "whisper-base",
+            "asr_local_model_path": "",      # optional: .pt file or model cache directory
             "asr_api_url": "",
             "asr_api_key": "",
             "asr_api_model": "whisper-1",
@@ -139,19 +142,137 @@ class VoiceEngine:
         return mapping.get(norm, "base")
 
     def _load_whisper(self, size: str):
+        import whisper
         size_hint_mb = {
             "tiny": "39MB",
             "base": "142MB",
             "small": "466MB",
         }.get(size, "未知大小")
-        cache_path = os.path.join(os.path.expanduser("~"), ".cache", "whisper", f"{size}.pt")
+
+        local_file, download_root = self._resolve_whisper_local_path(size)
+        if local_file:
+            self.send("status", message=f"正在加载 Whisper {size} 本地模型文件...")
+            self.send("download_progress", target="asr", model=f"whisper-{size}", stage="completed", percent=100)
+            self._whisper = whisper.load_model(local_file)
+            self.send("status", message=f"已使用本地模型文件: {local_file}")
+            self.send("status", message=f"Whisper {size} 就绪")
+            return
+
+        cache_root = download_root or self._default_whisper_cache_dir()
+        cache_path = os.path.join(cache_root, f"{size}.pt")
         if os.path.exists(cache_path):
             self.send("status", message=f"正在加载 Whisper {size} 本地模型...")
+            self.send("download_progress", target="asr", model=f"whisper-{size}", stage="completed", percent=100)
         else:
             self.send("status", message=f"首次使用 Whisper {size}，正在下载模型（约 {size_hint_mb}）...")
-        import whisper
-        self._whisper = whisper.load_model(size)
+
+        checkpoint = self._ensure_whisper_checkpoint(whisper, size, cache_root)
+        self._whisper = whisper.load_model(checkpoint)
         self.send("status", message=f"Whisper {size} 就绪")
+
+    @staticmethod
+    def _default_whisper_cache_dir() -> str:
+        default = os.path.join(os.path.expanduser("~"), ".cache")
+        return os.path.join(os.getenv("XDG_CACHE_HOME", default), "whisper")
+
+    def _resolve_whisper_local_path(self, size: str):
+        raw_path = str(self.config.get("asr_local_model_path") or "").strip()
+        if not raw_path:
+            return None, None
+
+        expanded = os.path.expandvars(os.path.expanduser(raw_path))
+        if os.path.isfile(expanded):
+            return expanded, None
+
+        if os.path.isdir(expanded):
+            candidate = os.path.join(expanded, f"{size}.pt")
+            if os.path.isfile(candidate):
+                return candidate, None
+            # Directory exists but checkpoint absent: use it as download/cache root.
+            return None, expanded
+
+        self.send("status", message=f"模型路径无效，回退默认缓存目录: {raw_path}")
+        return None, None
+
+    def _ensure_whisper_checkpoint(self, whisper_module, size: str, root: str) -> str:
+        os.makedirs(root, exist_ok=True)
+        url = whisper_module._MODELS[size]
+        expected_sha256 = url.split("/")[-2]
+        checkpoint_name = os.path.basename(url)
+        target_path = os.path.join(root, checkpoint_name)
+
+        if os.path.exists(target_path) and not os.path.isfile(target_path):
+            raise RuntimeError(f"{target_path} 存在但不是文件")
+
+        if os.path.isfile(target_path):
+            with open(target_path, "rb") as existing_file:
+                model_bytes = existing_file.read()
+            if hashlib.sha256(model_bytes).hexdigest() == expected_sha256:
+                total_mb = round(len(model_bytes) / (1024 * 1024), 1)
+                self.send(
+                    "download_progress",
+                    target="asr",
+                    model=f"whisper-{size}",
+                    stage="completed",
+                    percent=100,
+                    downloaded_mb=total_mb,
+                    total_mb=total_mb,
+                    speed_mbps=0.0,
+                )
+                return target_path
+            self.send("status", message=f"检测到损坏模型文件，重新下载: {target_path}")
+
+        self.send("download_progress", target="asr", model=f"whisper-{size}", stage="started", percent=0)
+        with urllib.request.urlopen(url) as source, open(target_path, "wb") as output:
+            total = int(source.info().get("Content-Length", "0") or "0")
+            downloaded = 0
+            started_at = time.time()
+            last_emit_at = 0.0
+
+            while True:
+                chunk = source.read(256 * 1024)
+                if not chunk:
+                    break
+                output.write(chunk)
+                downloaded += len(chunk)
+
+                now = time.time()
+                if now - last_emit_at < 0.2:
+                    continue
+                last_emit_at = now
+
+                percent = int((downloaded * 100 / total)) if total > 0 else 0
+                percent = max(0, min(99, percent))
+                speed = (downloaded / max(now - started_at, 0.001)) / (1024 * 1024)
+                self.send(
+                    "download_progress",
+                    target="asr",
+                    model=f"whisper-{size}",
+                    stage="downloading",
+                    percent=percent,
+                    downloaded_mb=round(downloaded / (1024 * 1024), 1),
+                    total_mb=round(total / (1024 * 1024), 1) if total > 0 else 0.0,
+                    speed_mbps=round(speed, 2),
+                )
+
+        with open(target_path, "rb") as model_file:
+            model_bytes = model_file.read()
+        if hashlib.sha256(model_bytes).hexdigest() != expected_sha256:
+            raise RuntimeError("模型下载完成但校验失败，请重试")
+
+        total_mb = round(len(model_bytes) / (1024 * 1024), 1)
+        speed = (len(model_bytes) / max(time.time() - started_at, 0.001)) / (1024 * 1024)
+        self.send(
+            "download_progress",
+            target="asr",
+            model=f"whisper-{size}",
+            stage="completed",
+            percent=100,
+            downloaded_mb=total_mb,
+            total_mb=total_mb,
+            speed_mbps=round(speed, 2),
+        )
+        return target_path
 
     def _load_whisper_fallback(self):
         try:
@@ -480,7 +601,7 @@ class VoiceEngine:
             old_llm = self.config["llm_backend"]
             patch = data.get("config", {})
             self.config.update(patch)
-            asr_related_keys = {"asr_backend", "asr_local_model"}
+            asr_related_keys = {"asr_backend", "asr_local_model", "asr_local_model_path"}
             if self.config["asr_backend"] != old_asr or any(k in patch for k in asr_related_keys):
                 self.load_asr()
             llm_related_keys = {"llm_backend", "llm_local_model", "llm_api_url", "llm_api_key", "llm_api_model", "polish_enabled"}

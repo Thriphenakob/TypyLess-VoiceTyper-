@@ -14,6 +14,15 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 import { HotkeyButton } from '../components/HotkeyButton';
 
+interface SettingsPageProps {
+    asrDownloadActive?: boolean;
+    asrDownloadPercent?: number;
+    asrDownloadModel?: string;
+    asrDownloadDownloadedMB?: number;
+    asrDownloadTotalMB?: number;
+    asrDownloadSpeedMBps?: number;
+}
+
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
     return (
         <div className="flex items-center justify-between">
@@ -34,7 +43,14 @@ function SelectField({ label, value, options, onChange }: { label: string; value
     );
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({
+    asrDownloadActive = false,
+    asrDownloadPercent = 0,
+    asrDownloadModel = '',
+    asrDownloadDownloadedMB = 0,
+    asrDownloadTotalMB = 0,
+    asrDownloadSpeedMBps = 0,
+}: SettingsPageProps) {
     const [config, setConfig] = useState<AppConfig>(getConfig());
     const [stats, setStats] = useState<ReturnType<typeof getTotalStats> | null>(null);
 
@@ -66,7 +82,7 @@ export default function SettingsPage() {
         }
 
         // Sync AI engine config to Python backend
-        const engineKeys = ['asrBackend', 'asrLocalModel', 'asrApiUrl', 'asrApiKey', 'asrApiModel',
+        const engineKeys = ['asrBackend', 'asrLocalModel', 'asrLocalModelPath', 'asrApiUrl', 'asrApiKey', 'asrApiModel',
             'llmBackend', 'llmLocalModel', 'llmApiUrl', 'llmApiKey', 'llmApiModel',
             'polishEnabled'];
         if (engineKeys.some(k => k in patch)) {
@@ -76,6 +92,7 @@ export default function SettingsPage() {
                     config: {
                         asr_backend: updated.asrBackend,
                         asr_local_model: updated.asrLocalModel,
+                        asr_local_model_path: updated.asrLocalModelPath,
                         asr_api_url: updated.asrApiUrl,
                         asr_api_key: updated.asrApiKey,
                         asr_api_model: updated.asrApiModel,
@@ -264,7 +281,7 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
                                 {config.asrBackend === 'local' ? (
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         <p className="text-xs text-gray-500">本地模型离线识别。首次使用对应模型时会自动下载。</p>
                                         <SelectField
                                             label="本地模型"
@@ -276,6 +293,36 @@ export default function SettingsPage() {
                                                 { value: 'whisper-small', label: 'Whisper Small（更准）' },
                                             ]}
                                         />
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">本地模型路径（可选）</label>
+                                            <input
+                                                type="text"
+                                                value={config.asrLocalModelPath}
+                                                onChange={(e) => update({ asrLocalModelPath: e.target.value })}
+                                                placeholder="例如：D:\\AI\\whisper 或 D:\\AI\\whisper\\base.pt"
+                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                                            />
+                                            <p className="text-[11px] text-gray-500 mt-1">
+                                                留空使用系统默认缓存目录。可填已有模型文件（.pt）或模型目录。
+                                            </p>
+                                        </div>
+                                        {asrDownloadActive && (
+                                            <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-900/10 p-3">
+                                                <div className="flex items-center justify-between text-xs mb-2">
+                                                    <span className="text-blue-700 dark:text-blue-300">正在下载 {asrDownloadModel || 'ASR 模型'}</span>
+                                                    <span className="font-medium text-blue-700 dark:text-blue-300">{Math.round(asrDownloadPercent)}%</span>
+                                                </div>
+                                                <div className="w-full h-2 bg-blue-100 dark:bg-blue-950/40 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-blue-500 transition-all duration-150"
+                                                        style={{ width: `${Math.max(2, Math.min(100, asrDownloadPercent))}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[11px] text-blue-700/90 dark:text-blue-200/90 mt-2">
+                                                    {asrDownloadDownloadedMB.toFixed(1)}MB / {asrDownloadTotalMB > 0 ? `${asrDownloadTotalMB.toFixed(1)}MB` : '未知'} · {asrDownloadSpeedMBps.toFixed(2)} MB/s
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="space-y-3">

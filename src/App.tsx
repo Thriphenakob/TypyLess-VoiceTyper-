@@ -63,13 +63,28 @@ export default function App() {
             isProcessing={engine.isProcessing}
             engineRunning={engine.engineRunning}
             statusMessage={engine.statusMessage}
+            asrDownloadActive={engine.asrDownloadActive}
+            asrDownloadPercent={engine.asrDownloadPercent}
+            asrDownloadModel={engine.asrDownloadModel}
+            asrDownloadDownloadedMB={engine.asrDownloadDownloadedMB}
+            asrDownloadTotalMB={engine.asrDownloadTotalMB}
+            asrDownloadSpeedMBps={engine.asrDownloadSpeedMBps}
           />
         )}
         {activeTab === 'stats' && <Stats />}
         {activeTab === 'hotkey' && <HotkeyConfig />}
         {activeTab === 'history' && <HistoryView />}
         {activeTab === 'profile' && <Profile />}
-        {activeTab === 'settings' && <SettingsPage />}
+        {activeTab === 'settings' && (
+          <SettingsPage
+            asrDownloadActive={engine.asrDownloadActive}
+            asrDownloadPercent={engine.asrDownloadPercent}
+            asrDownloadModel={engine.asrDownloadModel}
+            asrDownloadDownloadedMB={engine.asrDownloadDownloadedMB}
+            asrDownloadTotalMB={engine.asrDownloadTotalMB}
+            asrDownloadSpeedMBps={engine.asrDownloadSpeedMBps}
+          />
+        )}
       </main>
 
       <Toasts
