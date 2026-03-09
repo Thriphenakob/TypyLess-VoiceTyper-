@@ -47,9 +47,17 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*",
-      "python/**/*",
-      "!python/**/__pycache__/**"
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*",
+          "!**/__pycache__/**"
+        ]
+      }
     ],
     "win": {
       "target": "nsis"

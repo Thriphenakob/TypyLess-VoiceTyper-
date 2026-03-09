@@ -139,6 +139,16 @@ class VoiceEngine:
         return mapping.get(norm, "base")
 
     def _load_whisper(self, size: str):
+        size_hint_mb = {
+            "tiny": "39MB",
+            "base": "142MB",
+            "small": "466MB",
+        }.get(size, "未知大小")
+        cache_path = os.path.join(os.path.expanduser("~"), ".cache", "whisper", f"{size}.pt")
+        if os.path.exists(cache_path):
+            self.send("status", message=f"正在加载 Whisper {size} 本地模型...")
+        else:
+            self.send("status", message=f"首次使用 Whisper {size}，正在下载模型（约 {size_hint_mb}）...")
         import whisper
         self._whisper = whisper.load_model(size)
         self.send("status", message=f"Whisper {size} 就绪")

@@ -54,6 +54,15 @@ function redactCommand(cmd) {
     return cloned;
 }
 
+function redactEvent(event) {
+    if (!event || typeof event !== 'object') return event;
+    if (event.event !== 'config_updated') return event;
+    const cloned = { ...event, config: { ...(event.config || {}) } };
+    if (cloned.config.asr_api_key) cloned.config.asr_api_key = '[REDACTED]';
+    if (cloned.config.llm_api_key) cloned.config.llm_api_key = '[REDACTED]';
+    return cloned;
+}
+
 
 // ===== Single Instance Lock =====
 const gotTheLock = app.requestSingleInstanceLock();
@@ -135,7 +144,7 @@ function startPythonEngine() {
                 try {
                     const event = JSON.parse(line);
                     if (event.event !== 'audio_level') {
-                        log('INFO', 'Python event', event);
+                        log('INFO', 'Python event', redactEvent(event));
                     }
                     if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send('engine-event', event);
