@@ -1,0 +1,19 @@
+# Python Engine Dependencies for VoiceTyper (Upgraded)
+# Install: pip install -r requirements.txt
+#
+# NOTE: Ollama must be installed separately from https://ollama.com/download
+#       Then run: ollama pull qwen3.5:4b
+
+# ASR (Speech-to-Text)
+openai-whisper      # Whisper tiny/base/small local models (default)
+torch>=2.0.0
+sounddevice>=0.4.6
+numpy>=1.24.0
+scipy>=1.11.0
+
+# LLM (via Ollama HTTP API - no compilation needed)
+ollama>=0.4.0
+
+# Text Input
+pyautogui>=0.9.54
+pyperclip>=1.8.0

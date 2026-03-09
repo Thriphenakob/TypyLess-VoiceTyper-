@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+release/
+coverage/
+.DS_Store
+*.log
+*.pid
+python/__pycache__/
+*.py[cod]
+.vscode/
+.idea/
+.cache/
+.tmp/
+.env*
+!.env.example
