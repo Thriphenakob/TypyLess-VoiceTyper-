@@ -2,7 +2,7 @@
 
 桌面端语音输入助手（Electron + React + Python）。
 
-## 🖼️ 效果预览
+## 🖼️ 语音转文字
 
 ![VoiceTyper Preview](assets/images/image.png)
 
