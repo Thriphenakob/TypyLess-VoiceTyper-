@@ -46,6 +46,15 @@ try:
 except Exception:
     sd = None
 
+# Force UTF-8 on stdio to avoid mojibake when Electron parses engine events on Windows.
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 POLISH_SYSTEM_PROMPT = (
     "你是一个中文口语整理助手。你的任务是把语音识别得到的口语文本整理成更工整、可读性更好的书面表达。\n"
     "【绝对规则】：\n"

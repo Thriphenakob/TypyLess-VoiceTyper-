@@ -125,12 +125,17 @@ function startPythonEngine() {
     const scriptPath = app.isPackaged
         ? path.join(process.resourcesPath, 'python', 'engine.py')
         : path.join(__dirname, '..', 'python', 'engine.py');
+    const pythonEnv = {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8',
+        PYTHONUTF8: '1',
+    };
 
     try {
-        log('INFO', 'Starting Python engine', { pythonPath, scriptPath });
-        pythonProcess = spawn(pythonPath, [scriptPath], {
+        log('INFO', 'Starting Python engine', { pythonPath, scriptPath, pythonioencoding: pythonEnv.PYTHONIOENCODING });
+        pythonProcess = spawn(pythonPath, ['-X', 'utf8', scriptPath], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env },
+            env: pythonEnv,
         });
 
         let buffer = '';
