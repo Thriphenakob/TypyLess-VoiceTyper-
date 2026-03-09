@@ -166,17 +166,41 @@ function startPythonEngine() {
     }
 }
 
-function getRendererPaths() {
-    if (app.isPackaged) {
-        return {
-            distDir: path.join(process.resourcesPath, 'dist'),
-            overlayPath: path.join(process.resourcesPath, 'electron', 'overlay.html'),
-        };
+function resolveExistingPath(candidates) {
+    for (const candidate of candidates) {
+        try {
+            if (candidate && fs.existsSync(candidate)) {
+                return candidate;
+            }
+        } catch (_e) {
+            // Ignore invalid paths and continue probing.
+        }
     }
+    return candidates[0];
+}
+
+function getRendererPaths() {
+    const appPath = app.getAppPath();
+
+    const distCandidates = app.isPackaged
+        ? [
+            path.join(process.resourcesPath, 'dist'),
+            path.join(appPath, 'dist'),
+            path.join(__dirname, '..', 'dist'),
+        ]
+        : [path.join(__dirname, '..', 'dist')];
+
+    const overlayCandidates = app.isPackaged
+        ? [
+            path.join(process.resourcesPath, 'electron', 'overlay.html'),
+            path.join(appPath, 'electron', 'overlay.html'),
+            path.join(__dirname, 'overlay.html'),
+        ]
+        : [path.join(__dirname, 'overlay.html')];
 
     return {
-        distDir: path.join(__dirname, '..', 'dist'),
-        overlayPath: path.join(__dirname, 'overlay.html'),
+        distDir: resolveExistingPath(distCandidates),
+        overlayPath: resolveExistingPath(overlayCandidates),
     };
 }
 
@@ -203,6 +227,12 @@ async function startUiServer() {
     const indexPath = path.join(distDir, 'index.html');
 
     log('INFO', 'Starting local UI server', { distDir, overlayPath, indexPath });
+    if (!fs.existsSync(indexPath)) {
+        log('ERROR', 'Renderer index.html not found', { distDir, indexPath, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
+    }
+    if (!fs.existsSync(overlayPath)) {
+        log('ERROR', 'Overlay html not found', { overlayPath, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
+    }
 
     uiServer = http.createServer((req, res) => {
         const reqUrl = new URL(req.url || '/', 'http://127.0.0.1');
