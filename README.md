@@ -2,6 +2,10 @@
 
 桌面端语音输入助手（Electron + React + Python）。
 
+## 🖼️ 效果预览
+
+![VoiceTyper Preview](assets/images/image.png)
+
 ## 🚦 两种使用方式
 
 - 普通用户（直接用）：下载 GitHub Releases 里的安装包，安装后配置即可使用。
