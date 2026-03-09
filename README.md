@@ -21,7 +21,8 @@
 
 - 双击安装包完成安装
 - 启动 `VoiceTyper`
-- 
+- 到设置 选择 合适的ASR模型
+- 选择你的API或者本地模型
 ##  界面展示
 ![VoiceTyper Preview](assets/images/ui.png)
 
